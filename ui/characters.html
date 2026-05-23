@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Characters</title>
+
+<!-- FONT -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* Your palettes merged */
+    --p1: #84C1FF;
+    --p2: #ADD6FF;
+    --p3: #D6EAFF;
+    --p4: #EAF4FF;
+    --p5: #F8FBFF;
+
+    --blue1: #EDF2FB;
+    --blue2: #E2EAFC;
+    --blue3: #D7E3FC;
+    --blue4: #CCDBFD;
+    --blue5: #C1D3FE;
+    --blue6: #B6CCFE;
+    --blue7: #ABC4FF;
+
+    --text-dark: #2a2a2a;
+    --text-soft: #4a4a4a;
+
+    --radius: 18px;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background: var(--blue1);
+    color: var(--text-dark);
+    overflow-x: hidden;
+  }
+
+  
+  /* NAV BAR */
+  nav {
+    display: flex;
+    background: var(--blue3);
+    padding: 0 20px;
+    border-bottom: 3px solid var(--blue6);
+    position: relative;
+    z-index: 9999;
+  }
+
+  nav a {
+    padding: 14px 20px;
+    color: #1a1a1a;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  nav a:hover {
+    background: var(--blue4);
+    border-radius: 8px;
+  }
+
+  nav a.active {
+    background: var(--blue5);
+    border-radius: 8px;
+  }
+
+  /* HERO HEADER */
+  .hero {
+    width: 100%;
+    padding: 70px 20px 120px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--blue3), var(--blue1));
+    position: relative;
+  }
+
+  /* Floating circles */
+  .hero::before,
+  .hero::after {
+    content: "";
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    background: var(--blue5);
+    opacity: 0.25;
+    border-radius: 50%;
+    filter: blur(50px);
+    z-index: 0;
+  }
+  .hero::before {
+    top: -60px;
+    left: -40px;
+  }
+  .hero::after {
+    bottom: -80px;
+    right: -40px;
+  }
+
+  .hero-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-sub {
+    font-size: 1.15rem;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* SEARCH BAR */
+  .search-wrap {
+    margin: -60px auto 20px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 10;
+  }
+
+  #searchInput {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 50px;
+    border: 2px solid var(--blue4);
+    background: white;
+    font-size: 1rem;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    outline: none;
+  }
+
+  /* CATEGORY CHIPS (F4 floating bubbles) */
+  .chip-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 10px 20px 0;
+  }
+
+  .chip {
+    padding: 8px 18px;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .chip:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.14);
+  }
+
+  .chip.active {
+    border-color: var(--blue6);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+  }
+
+  /* FEATURED SECTION */
+  .featured-section {
+    padding: 20px 20px 0;
+  }
+
+  .featured-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .featured-row {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+
+  .featured-row::-webkit-scrollbar {
+    height: 6px;
+  }
+  .featured-row::-webkit-scrollbar-thumb {
+    background: var(--blue4);
+    border-radius: 10px;
+  }
+
+  /* GRID */
+  .container {
+    padding: 20px;
+  }
+
+  #characterGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 26px;
+    margin-top: 10px;
+  }
+
+  /* PROFILE CARD */
+  .char-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 20px 16px 24px;
+    text-align: center;
+    border: 2px solid var(--blue4);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+  }
+
+  .char-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.14);
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  /* Circular portrait */
+  .char-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--blue5);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    margin-bottom: 14px;
+    background: var(--blue3);
+  }
+
+  .char-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .char-desc {
+    font-size: 0.9rem;
+    color: var(--text-soft);
+    margin-bottom: 16px;
+    min-height: 40px;
+  }
+
+  .chat-btn {
+    background: var(--blue7);
+    border: none;
+    padding: 10px 18px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 50px;
+    font-size: 0.95rem;
+    transition: background 0.2s;
+  }
+  .chat-btn:hover {
+    background: var(--blue6);
+  }
+</style>
+</head>
+
+<body>
+
+<!-- NAVIGATION -->
+<nav>
+  <a href="index.html">Home</a>
+  <a href="characters.html" class="active">Characters</a>
+  <a href="personas.html">Personas</a>
+  <a href="gallery.html">Gallery</a>
+</nav>
+
+<!-- HERO HEADER -->
+<div class="hero">
+  <div class="hero-title">Your Characters</div>
+  <div class="hero-sub">Choose someone to talk to</div>
+</div>
+
+<!-- SEARCH BAR -->
+<div class="search-wrap">
+  <input id="searchInput" type="text" placeholder="Search characters...">
+</div>
+
+<!-- CATEGORY CHIPS -->
+<div class="chip-row" id="chipRow"></div>
+
+<!-- FEATURED SECTION -->
+<div class="featured-section">
+  <div class="featured-title">Featured Characters</div>
+  <div class="featured-row" id="featuredRow"></div>
+</div>
+
+<!-- CHARACTER GRID -->
+<div class="container">
+  <div id="characterGrid"></div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+const grid = document.getElementById("characterGrid");
+const searchInput = document.getElementById("searchInput");
+const chipRow = document.getElementById("chipRow");
+const featuredRow = document.getElementById("featuredRow");
+
+let allCharacters = [];
+let categories = new Set();
+let activeCategory = "All";
+
+/* Pastel colors for chips */
+const chipColors = ["#84C1FF", "#ADD6FF", "#D6EAFF", "#EAF4FF", "#F8FBFF"];
+
+/* Auto-detect category from description */
+function detectCategory(desc) {
+  desc = desc.toLowerCase();
+
+  if (desc.includes("BBC") || desc.includes("Sherlock") || desc.includes("John") || desc.includes("Lestrade")) return "BBC Sherlock";
+  if (desc.includes("honkai") || desc.includes("astral") || desc.includes("Honkai")) return "Honkai Star Rail";
+  if (desc.includes("genshin") || desc.includes("vision")) return "Genshin Impact";
+  if (desc.includes("guy") || desc.includes("man") || desc.includes("men") || desc.includes("boyfriend") || desc.includes("he")) return "Men";
+  if (desc.includes("MCU") || desc.includes("marvel") || desc.includes("Marvel")) return "Marvel";
+  if (desc.includes("multiple people") || desc.includes("people") || desc.includes("duo") || desc.includes("everyone")) return "Multiple Characters";
+  
+
+  return "Other";
+}
+
+/* Track usage */
+function incrementUsage(id) {
+  let usage = JSON.parse(localStorage.getItem("usage") || "{}");
+  usage[id] = (usage[id] || 0) + 1;
+  localStorage.setItem("usage", JSON.stringify(usage));
+}
+
+function getUsage(id) {
+  let usage = JSON.parse(localStorage.getItem("usage") || "{}");
+  return usage[id] || 0;
+}
+
+/* Render featured characters */
+function renderFeatured() {
+  featuredRow.innerHTML = "";
+
+  const sorted = [...allCharacters].sort((a, b) => getUsage(b.id) - getUsage(a.id));
+  const top = sorted.slice(0, 3);
+
+  for (const data of top) {
+    const card = document.createElement("div");
+    card.className = "char-card";
+    card.style.minWidth = "200px";
+
+    const img = document.createElement("img");
+    img.className = "char-img";
+
+    if (data.image_url) {
+      const path = data.image_url.startsWith("/") ? data.image_url : "/" + data.image_url;
+      img.src = API + path;
+    }
+
+    const name = document.createElement("div");
+    name.className = "char-name";
+    name.textContent = data.name;
+
+    const btn = document.createElement("button");
+    btn.className = "chat-btn";
+    btn.textContent = "Chat";
+    btn.onclick = () => {
+      incrementUsage(data.id);
+      window.location.href = `chat.html?character=${data.id}`;
+    };
+
+    card.appendChild(img);
+    card.appendChild(name);
+    card.appendChild(btn);
+
+    featuredRow.appendChild(card);
+  }
+}
+
+/* Render category chips */
+function renderChips() {
+  chipRow.innerHTML = "";
+
+  const all = ["All", ...categories];
+
+  all.forEach((cat, i) => {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.textContent = cat;
+
+    chip.style.background = chipColors[i % chipColors.length];
+    chip.style.borderColor = chipColors[(i + 1) % chipColors.length];
+
+    if (cat === activeCategory) chip.classList.add("active");
+
+    chip.onclick = () => {
+      activeCategory = cat;
+      renderChips();
+      filterCharacters();
+    };
+
+    chipRow.appendChild(chip);
+  });
+}
+
+/* Render character grid */
+function renderCharacters(list) {
+  grid.innerHTML = "";
+
+  for (const data of list) {
+    const card = document.createElement("div");
+    card.className = "char-card";
+
+    const img = document.createElement("img");
+    img.className = "char-img";
+
+    if (data.image_url) {
+      const path = data.image_url.startsWith("/") ? data.image_url : "/" + data.image_url;
+      img.src = API + path;
+    }
+
+    const name = document.createElement("div");
+    name.className = "char-name";
+    name.textContent = data.name;
+
+    const desc = document.createElement("div");
+    desc.className = "char-desc";
+    desc.textContent = data.description || "";
+
+    const btn = document.createElement("button");
+    btn.className = "chat-btn";
+    btn.textContent = "Chat";
+    btn.onclick = () => {
+      incrementUsage(data.id);
+      window.location.href = `chat.html?character=${data.id}`;
+    };
+
+    card.appendChild(img);
+    card.appendChild(name);
+    card.appendChild(desc);
+    card.appendChild(btn);
+
+    grid.appendChild(card);
+  }
+}
+
+/* Filter by category + search */
+function filterCharacters() {
+  const q = searchInput.value.toLowerCase();
+
+  let filtered = allCharacters.filter(c =>
+    c.name.toLowerCase().includes(q) ||
+    (c.description || "").toLowerCase().includes(q)
+  );
+
+  if (activeCategory !== "All") {
+    filtered = filtered.filter(c => c._category === activeCategory);
+  }
+
+  renderCharacters(filtered);
+}
+
+/* Load characters */
+async function loadCharacters() {
+  const res = await fetch(`${API}/characters`);
+  const chars = await res.json();
+
+  for (const char of chars) {
+    const data = await fetch(`${API}/character/${char.id}`).then(r => r.json());
+
+    data._category = detectCategory(data.description || "");
+    categories.add(data._category);
+
+    allCharacters.push(data);
+  }
+
+  renderChips();
+  renderFeatured();
+  filterCharacters();
+}
+
+searchInput.addEventListener("input", filterCharacters);
+
+loadCharacters();
+</script>
+
+</body>
+</html>

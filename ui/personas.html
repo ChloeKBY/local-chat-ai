@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Personas</title>
+
+<!-- FONT -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* Pastel Fantasy */
+    --p1: #84C1FF;
+    --p2: #ADD6FF;
+    --p3: #D6EAFF;
+    --p4: #EAF4FF;
+    --p5: #F8FBFF;
+
+    /* Blue Serenity */
+    --blue1: #EDF2FB;
+    --blue2: #E2EAFC;
+    --blue3: #D7E3FC;
+    --blue4: #CCDBFD;
+    --blue5: #C1D3FE;
+    --blue6: #B6CCFE;
+    --blue7: #ABC4FF;
+
+    --text-dark: #2a2a2a;
+    --text-soft: #4a4a4a;
+
+    --radius: 18px;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background: var(--blue1);
+    color: var(--text-dark);
+    overflow-x: hidden;
+  }
+
+  
+  /* NAV BAR */
+  nav {
+    display: flex;
+    background: var(--blue3);
+    padding: 0 20px;
+    border-bottom: 3px solid var(--blue6);
+    position: relative;
+    z-index: 9999;
+  }
+
+  nav a {
+    padding: 14px 20px;
+    color: #1a1a1a;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  nav a:hover {
+    background: var(--blue4);
+    border-radius: 8px;
+  }
+
+  nav a.active {
+    background: var(--blue5);
+    border-radius: 8px;
+  }
+
+  /* HERO HEADER */
+  .hero {
+    width: 100%;
+    padding: 70px 20px 80px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--blue3), var(--blue1));
+    position: relative;
+  }
+
+  .hero::before,
+  .hero::after {
+    content: "";
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    background: var(--blue5);
+    opacity: 0.25;
+    border-radius: 50%;
+    filter: blur(50px);
+    z-index: 0;
+  }
+  .hero::before {
+    top: -60px;
+    left: -40px;
+  }
+  .hero::after {
+    bottom: -80px;
+    right: -40px;
+  }
+
+  .hero-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-sub {
+    font-size: 1.15rem;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* SEARCH BAR */
+  .search-wrap {
+    margin: -60px auto 20px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 10;
+  }
+
+  #searchInput {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 50px;
+    border: 2px solid var(--blue4);
+    background: white;
+    font-size: 1rem;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    outline: none;
+  }
+
+  /* CATEGORY CHIPS */
+  .chip-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 10px 20px 0;
+  }
+
+  .chip {
+    padding: 8px 18px;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .chip:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.14);
+  }
+
+  .chip.active {
+    border-color: var(--blue6);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+  }
+
+  /* FEATURED SECTION */
+  .featured-section {
+    padding: 20px 20px 0;
+  }
+
+  .featured-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .featured-row {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+
+  .featured-row::-webkit-scrollbar {
+    height: 6px;
+  }
+  .featured-row::-webkit-scrollbar-thumb {
+    background: var(--blue4);
+    border-radius: 10px;
+  }
+
+  /* PERSONA GRID */
+  .container {
+    padding: 20px;
+  }
+
+  #personaGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 26px;
+    margin-top: 10px;
+  }
+
+  /* PERSONA CARD (P3 + G4) */
+  .persona-card {
+    background: linear-gradient(180deg, var(--p5), var(--p4));
+    border-radius: var(--radius);
+    padding: 24px 16px 20px;
+    text-align: center;
+    border: 2px solid var(--blue4);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+  }
+
+  .persona-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.14);
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .persona-img {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--blue5);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    margin-bottom: 14px;
+    background: var(--blue3);
+  }
+
+  .persona-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .persona-desc {
+    font-size: 0.9rem;
+    color: var(--text-soft);
+    margin-bottom: 12px;
+    min-height: 40px;
+  }
+
+  /* TRAIT BADGE */
+  .trait-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    border: 2px solid var(--blue4);
+    background: var(--p3);
+    color: var(--text-dark);
+  }
+
+  /* BUTTON ROW */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .edit-btn, .delete-btn {
+    flex: 1;
+    padding: 10px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    border-radius: 10px;
+  }
+
+  .edit-btn {
+    background: var(--blue7);
+  }
+  .edit-btn:hover {
+    background: var(--blue6);
+  }
+
+  .delete-btn {
+    background: #ffb3b3;
+  }
+  .delete-btn:hover {
+    background: #ff8c8c;
+  }
+
+  /* FORM CARD */
+  .form-card {
+    max-width: 600px;
+    margin: 40px auto;
+    background: white;
+    border-radius: 18px;
+    border: 2px solid var(--blue4);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+    padding: 28px;
+    display: none;
+    position: relative;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+  }
+  .close-btn:hover {
+    color: #333;
+  }
+
+  .form-card h2 {
+    margin-top: 0;
+    text-align: center;
+    color: #333;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+  }
+
+  label {
+    font-weight: bold;
+    display: block;
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"],
+  textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--blue4);
+    border-radius: 10px;
+    background: var(--blue2);
+    font-size: 1rem;
+  }
+
+  textarea {
+    height: 120px;
+    resize: none;
+  }
+
+  #preview {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid var(--blue4);
+    margin-top: 10px;
+    display: none;
+  }
+
+  .submit-btn {
+    margin-top: 24px;
+    width: 100%;
+    padding: 14px;
+    background: var(--blue7);
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .submit-btn:hover {
+    background: var(--blue6);
+  }
+
+  /* NEW PERSONA BUTTON */
+  .new-persona-btn {
+    background: var(--blue7);
+    border: none;
+    padding: 14px 28px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .new-persona-btn:hover {
+    background: var(--blue6);
+    transform: translateY(-2px);
+  }
+</style>
+</head>
+
+<body>
+
+<nav>
+  <a href="index.html">Home</a>
+  <a href="characters.html">Characters</a>
+  <a href="personas.html" class="active">Personas</a>
+  <a href="gallery.html">Gallery</a>
+</nav>
+
+<!-- HERO HEADER -->
+<div class="hero">
+  <div class="hero-title">Persona Studio</div>
+  <div class="hero-sub">Craft identities for your AI companions</div>
+</div>
+
+<!-- SEARCH BAR -->
+<div class="search-wrap">
+  <input id="searchInput" type="text" placeholder="Search personas...">
+</div>
+
+<!-- CATEGORY CHIPS -->
+<div class="chip-row" id="chipRow"></div>
+
+<!-- FEATURED SECTION -->
+<div class="featured-section">
+  <div class="featured-title">Featured Personas</div>
+  <div class="featured-row" id="featuredRow"></div>
+</div>
+
+<!-- NEW PERSONA BUTTON -->
+<div style="text-align:center; margin-top:20px;">
+  <button id="newPersonaBtn" class="new-persona-btn">+ New Persona</button>
+</div>
+
+<!-- FORM CARD -->
+<div class="form-card" id="personaForm">
+  <h2>Create a Persona</h2>
+  <button id="closeFormBtn" class="close-btn">×</button>
+
+  <label>Name</label>
+  <input id="name" type="text" placeholder="e.g., Midnight Fox">
+
+  <label>Description</label>
+  <textarea id="description" placeholder="Describe this persona..."></textarea>
+
+  <label>Image</label>
+  <input id="image" type="file" accept="image/*">
+  <img id="preview">
+
+  <button class="submit-btn" onclick="createPersona()">Save Persona</button>
+</div>
+
+<!-- PERSONA GRID -->
+<div class="container">
+  <div id="personaGrid"></div>
+</div>
+
+<!-- SCRIPT STARTS BELOW IN PART 2 -->
+<script>
+const API = "http://127.0.0.1:8000";
+
+const grid = document.getElementById("personaGrid");
+const formCard = document.getElementById("personaForm");
+const newBtn = document.getElementById("newPersonaBtn");
+const closeBtn = document.getElementById("closeFormBtn");
+const chipRow = document.getElementById("chipRow");
+const featuredRow = document.getElementById("featuredRow");
+const searchInput = document.getElementById("searchInput");
+
+let allPersonas = [];
+let categories = new Set();
+let activeCategory = "All";
+let editingId = null;
+
+/* Pastel chip colors */
+const chipColors = ["#84C1FF", "#ADD6FF", "#D6EAFF", "#EAF4FF", "#F8FBFF"];
+
+/* Auto-detect persona trait category */
+function detectCategory(desc) {
+  desc = desc.toLowerCase();
+
+  if (desc.includes("shy") || desc.includes("reserved") || desc.includes("calm")) return "Quiet";
+  if (desc.includes("chaotic") || desc.includes("energetic") || desc.includes("wild")) return "Energetic";
+  if (desc.includes("badass") || desc.includes("observant") || desc.includes("snark")) return "Cool";
+  if (desc.includes("intelligent") || desc.includes("analytical") || desc.includes("smart")) return "Smart";
+  if (desc.includes("soul") || desc.includes("Persephone") || desc.includes("Guide")) return "Otherworldly";
+
+  return "Other";
+}
+/*shortened description for persona */
+function truncateText(text, maxLength) {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength).trim() + "…";
+}
+
+/* Usage tracking */
+function incrementUsage(id) {
+  let usage = JSON.parse(localStorage.getItem("personaUsage") || "{}");
+  usage[id] = (usage[id] || 0) + 1;
+  localStorage.setItem("personaUsage", JSON.stringify(usage));
+}
+
+function getUsage(id) {
+  let usage = JSON.parse(localStorage.getItem("personaUsage") || "{}");
+  return usage[id] || 0;
+}
+
+/* Featured personas */
+function renderFeatured() {
+  featuredRow.innerHTML = "";
+
+  const sorted = [...allPersonas].sort((a, b) => getUsage(b.id) - getUsage(a.id));
+  const top = sorted.slice(0, 3);
+
+  for (const p of top) {
+    const card = document.createElement("div");
+    card.className = "persona-card";
+    card.style.minWidth = "200px";
+
+    const img = document.createElement("img");
+    img.className = "persona-img";
+
+    if (p.image_url) {
+      const path = p.image_url.startsWith("/") ? p.image_url : "/" + p.image_url;
+      img.src = API + path;
+    }
+
+    const name = document.createElement("div");
+    name.className = "persona-name";
+    name.textContent = p.name;
+
+    const btn = document.createElement("button");
+    btn.className = "edit-btn";
+    btn.textContent = "Use";
+    btn.onclick = () => {
+      incrementUsage(p.id);
+      alert("Persona selected!");
+    };
+
+    card.appendChild(img);
+    card.appendChild(name);
+    card.appendChild(btn);
+
+    featuredRow.appendChild(card);
+  }
+}
+
+/* Category chips */
+function renderChips() {
+  chipRow.innerHTML = "";
+
+  const all = ["All", ...categories];
+
+  all.forEach((cat, i) => {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.textContent = cat;
+
+    chip.style.background = chipColors[i % chipColors.length];
+    chip.style.borderColor = chipColors[(i + 1) % chipColors.length];
+
+    if (cat === activeCategory) chip.classList.add("active");
+
+    chip.onclick = () => {
+      activeCategory = cat;
+      renderChips();
+      filterPersonas();
+    };
+
+    chipRow.appendChild(chip);
+  });
+}
+
+/* Render persona grid */
+function renderPersonas(list) {
+  grid.innerHTML = "";
+
+  for (const p of list) {
+    const card = document.createElement("div");
+    card.className = "persona-card";
+
+    // IMAGE
+    const img = document.createElement("img");
+    img.className = "persona-img";
+    if (p.image_url) {
+      const path = p.image_url.startsWith("/") ? p.image_url : "/" + p.image_url;
+      img.src = API + path;
+    }
+
+    // NAME
+    const name = document.createElement("div");
+    name.className = "persona-name";
+    name.textContent = p.name;
+
+    // DESCRIPTION
+    const desc = document.createElement("div");
+    desc.className = "persona-desc";
+    desc.textContent = truncateText(p.description || "", 90);
+
+    // TRAIT BADGE
+    const badge = document.createElement("div");
+    badge.className = "trait-badge";
+    badge.textContent = p._category;
+
+    // BUTTON ROW
+    const btnRow = document.createElement("div");
+    btnRow.className = "btn-row";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "edit-btn";
+    editBtn.textContent = "Edit";
+    editBtn.onclick = () => startEditingPersona(p);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.onclick = () => deletePersona(p.id);
+
+    btnRow.appendChild(editBtn);
+    btnRow.appendChild(deleteBtn);
+
+    // BUILD CARD
+    card.appendChild(img);
+    card.appendChild(name);
+    card.appendChild(desc);
+    card.appendChild(badge);
+    card.appendChild(btnRow);
+
+    // ADD TO GRID
+    grid.appendChild(card);
+  }
+}
+
+/* Filter personas */
+function filterPersonas() {
+  let list = [...allPersonas];
+
+  // category filter
+  if (activeCategory !== "All") {
+    list = list.filter(p => p._category === activeCategory);
+  }
+
+  // search filter
+  const q = searchInput.value.toLowerCase();
+  if (q.trim() !== "") {
+    list = list.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q)
+    );
+  }
+
+  renderPersonas(list);
+}
+
+/* Load personas from backend */
+async function loadPersonas() {
+  try {
+    const res = await fetch(`${API}/personas`);
+    const data = await res.json();
+
+    allPersonas = data;
+
+    categories.clear();
+    allPersonas.forEach(p => {
+      p._category = detectCategory(p.description || "");
+      categories.add(p._category);
+    });
+
+    renderChips();
+    renderFeatured();
+    filterPersonas();
+  } catch (err) {
+    console.error("Failed to load personas:", err);
+  }
+}
+
+/* Create or update persona */
+async function createPersona() {
+  const name = document.getElementById("name").value.trim();
+  const description = document.getElementById("description").value.trim();
+  const imageFile = document.getElementById("image").files[0];
+
+  if (!name) {
+    alert("Name is required.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("description", description);
+
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+  const url = editingId
+    ? `${API}/personas/${editingId}`
+    : `${API}/personas`;
+
+  const method = editingId ? "PUT" : "POST";
+
+  try {
+    await fetch(url, { method, body: formData });
+    closeForm();
+    loadPersonas();
+  } catch (err) {
+    console.error("Failed to save persona:", err);
+  }
+}
+
+/* Delete persona */
+async function deletePersona(id) {
+  if (!confirm("Delete this persona?")) return;
+
+  try {
+    await fetch(`${API}/personas/${id}`, { method: "DELETE" });
+    loadPersonas();
+  } catch (err) {
+    console.error("Failed to delete persona:", err);
+  }
+}
+
+/* Edit persona */
+function startEditingPersona(p) {
+  editingId = p.id;
+
+  document.getElementById("name").value = p.name;
+  document.getElementById("description").value = p.description;
+
+  if (p.image_url) {
+    const preview = document.getElementById("preview");
+    const path = p.image_url.startsWith("/") ? p.image_url : "/" + p.image_url;
+    preview.src = API + path;
+    preview.style.display = "block";
+  }
+
+  formCard.style.display = "block";
+}
+
+/* Form open/close */
+newBtn.onclick = () => {
+  editingId = null;
+  document.getElementById("name").value = "";
+  document.getElementById("description").value = "";
+  document.getElementById("image").value = "";
+  document.getElementById("preview").style.display = "none";
+  formCard.style.display = "block";
+};
+
+closeBtn.onclick = closeForm;
+
+function closeForm() {
+  formCard.style.display = "none";
+}
+
+/* Image preview */
+document.getElementById("image").onchange = e => {
+  const file = e.target.files[0];
+  const preview = document.getElementById("preview");
+
+  if (file) {
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+  }
+};
+
+/* Search input */
+searchInput.oninput = filterPersonas;
+
+/* Load everything */
+loadPersonas();
+</script>
+
+</body>
+</html>

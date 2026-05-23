@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Gallery</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --blue1: #EDF2FB;
+    --blue2: #E2EAFC;
+    --blue3: #D7E3FC;
+    --blue4: #CCDBFD;
+    --blue5: #C1D3FE;
+    --blue6: #B6CCFE;
+    --blue7: #ABC4FF;
+
+    --radius: 20px;
+    --text-dark: #2a2a2a;
+    --text-soft: #4a4a4a;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background: var(--blue1);
+    color: var(--text-dark);
+    overflow-x: hidden;
+  }
+
+  /* NAV BAR */
+  nav {
+    display: flex;
+    background: var(--blue3);
+    padding: 0 20px;
+    border-bottom: 3px solid var(--blue6);
+    position: relative;
+    z-index: 9999;
+  }
+
+  nav a {
+    padding: 14px 20px;
+    color: #1a1a1a;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  nav a:hover {
+    background: var(--blue4);
+    border-radius: 8px;
+  }
+
+  nav a.active {
+    background: var(--blue5);
+    border-radius: 8px;
+  }
+
+  /* HERO HEADER */
+  .hero {
+    width: 100%;
+    padding: 70px 20px 120px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--blue3), var(--blue1));
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before,
+  .hero::after {
+    content: "";
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: var(--blue5);
+    opacity: 0.25;
+    border-radius: 50%;
+    filter: blur(60px);
+    z-index: 0;
+  }
+
+  .hero::before {
+    top: -80px;
+    left: -60px;
+  }
+
+  .hero::after {
+    bottom: -100px;
+    right: -40px;
+  }
+
+  .hero-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-sub {
+    font-size: 1.15rem;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* CATEGORY CHIPS — Frosted Glass */
+  .chip-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: -50px;
+    margin-bottom: 30px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .chip {
+    padding: 10px 22px;
+    border-radius: 40px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+
+  .chip:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .chip.active {
+    background: rgba(255, 255, 255, 0.75);
+    border-color: var(--blue6);
+  }
+
+  /* GALLERY CONTAINER */
+  .gallery-container {
+    padding: 20px 20px 80px;
+    position: relative;
+  }
+
+  .gallery-container::before,
+  .gallery-container::after {
+    content: "";
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    background: var(--blue4);
+    opacity: 0.18;
+    border-radius: 50%;
+    filter: blur(60px);
+    z-index: 0;
+  }
+
+  .gallery-container::before {
+    top: 20px;
+    left: -80px;
+  }
+
+  .gallery-container::after {
+    bottom: 40px;
+    right: -60px;
+  }
+
+  /* AIRY MASONRY GRID */
+  .gallery-grid {
+    position: relative;
+    z-index: 2;
+    column-count: 3;
+    column-gap: 26px;
+    padding: 10px;
+  }
+
+  @media (max-width: 900px) {
+    .gallery-grid { column-count: 2; }
+  }
+
+  @media (max-width: 600px) {
+    .gallery-grid { column-count: 1; }
+  }
+
+  .gallery-card {
+    break-inside: avoid;
+    margin-bottom: 26px;
+    background: white;
+    border-radius: var(--radius);
+    padding: 14px;
+    border: 2px solid var(--blue4);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 0.6s forwards;
+  }
+
+  .gallery-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.14);
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .gallery-img {
+    width: 100%;
+    border-radius: var(--radius);
+    background: var(--blue3);
+  }
+
+  /* LIGHTBOX */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    backdrop-filter: blur(4px);
+  }
+
+  .lightbox img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: var(--radius);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: popIn 0.25s ease-out;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+
+<body>
+
+<nav>
+  <a href="index.html">Home</a>
+  <a href="characters.html">Characters</a>
+  <a href="personas.html">Personas</a>
+  <a href="gallery.html" class="active">Gallery</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-title">Gallery</div>
+  <div class="hero-sub">Aesthetic pictures + all my inspo!</div>
+</div>
+
+<!-- CATEGORY CHIPS -->
+<div class="chip-row" id="chipRow"></div>
+
+<div class="gallery-container">
+  <div id="galleryGrid" class="gallery-grid"></div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" class="lightbox">
+  <img id="lightboxImg" src="">
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+let allImages = [];
+let activeCategory = "All";
+
+async function loadGallery() {
+  const res = await fetch(`${API}/gallery-images`);
+  const images = await res.json();
+
+  // Example category detection (you can customize)
+  allImages = images.map(src => ({
+    src: API + src,
+    category:
+      src.includes("character") ? "Character Art" :
+      src.includes("OC") ? "Persona Art & Inspo" :
+      src.includes("wallpaper") ? "Wallpapers" :
+      src.includes("webdesign") ? "Web Design Inspo" :
+      "Misc"
+  }));
+
+  renderChips();
+  renderGallery();
+}
+
+function renderChips() {
+  const chipRow = document.getElementById("chipRow");
+  chipRow.innerHTML = "";
+
+  const categories = ["All", "Character Art", "Persona Art & Inspo", "Wallpapers", "Web Design Inspo", "Misc"];
+  categories.forEach(cat => {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.textContent = cat;
+
+    if (cat === activeCategory) chip.classList.add("active");
+
+    chip.onclick = () => {
+      activeCategory = cat;
+      renderChips();
+      renderGallery();
+    };
+
+    chipRow.appendChild(chip);
+  });
+}
+
+function renderGallery() {
+  const grid = document.getElementById("galleryGrid");
+  grid.innerHTML = "";
+
+  const filtered = activeCategory === "All"
+    ? allImages
+    : allImages.filter(img => img.category === activeCategory);
+
+  filtered.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "gallery-card";
+
+    const img = document.createElement("img");
+    img.className = "gallery-img";
+    img.src = item.src;
+
+    card.appendChild(img);
+    grid.appendChild(card);
+
+    card.onclick = () => openLightbox(item.src);
+  });
+}
+
+function openLightbox(src) {
+  const lb = document.getElementById("lightbox");
+  const lbImg = document.getElementById("lightboxImg");
+  lbImg.src = src;
+  lb.style.display = "flex";
+}
+
+document.getElementById("lightbox").onclick = () => {
+  document.getElementById("lightbox").style.display = "none";
+};
+
+loadGallery();
+</script>
+
+</body>
+</html>

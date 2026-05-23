@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="characters.html">Characters</a>
+    <a href="personas.html">Personas</a>
+    <a href="gallery.html">Gallery</a>
+  </nav>
+
+
+  <div class="chat-page">
+    <header id="chatHeader">
+      <div class="header-left">
+        <img id="charAvatar" class="avatar" alt="Character avatar">
+        <div class="header-text">
+          <div id="charName" class="char-title">Character</div>
+        </div>
+      </div>
+      <div id="menuButton" class="menu-button">⋮</div>
+    </header>
+
+    <main class="chat-main">
+      <div id="chatWindow" class="messages"></div>
+
+      <!-- Typing Indicator -->
+      <div id="typingIndicator" class="typing-indicator hidden">
+        <div class="typing-bubble">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="chat-input-bar">
+      <input id="userInput" type="text" placeholder="Say something...">
+      <button id="sendBtn">Send</button>
+    </footer>
+  </div>
+
+  <!-- MAIN DRAWER -->
+  <aside id="sideDrawer">
+    <div class="drawer-header">
+      <img id="drawerAvatar" class="avatar-large" alt="Character avatar">
+      <div id="drawerName" class="drawer-name"></div>
+      <div id="drawerDesc" class="drawer-desc"></div>
+    </div>
+
+    <button id="openHistoryBtn" class="drawer-button">Chat History</button>
+
+    <div class="drawer-section">
+      <label for="personaSelect">Persona</label>
+      <select id="personaSelect"></select>
+    </div>
+
+    <div class="drawer-section">
+      <label for="memoryBox">Memory (for this chat)</label>
+      <textarea id="memoryBox" rows="6"></textarea>
+      <button id="saveMemoryBtn" class="drawer-button secondary">Save Memory</button>
+    </div>
+  </aside>
+
+  <!-- HISTORY DRAWER -->
+  <aside id="historyDrawer">
+    <div class="drawer-header history-header">
+      <div class="drawer-name">Chat History</div>
+      <button id="closeHistoryBtn" class="drawer-close">X</button>
+    </div>
+
+    <div id="historyList" class="chat-list"></div>
+
+    <button id="historyNewChatBtn" class="drawer-button">+ New Chat</button>
+  </aside>
+
+  <script src="script.js"></script>
+</body>
+</html>

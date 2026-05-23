@@ -1,0 +1,2 @@
+I KNOW I'M GONNA FORGET THIS HERE'S HOW TO START THE SERVER:
+uvicorn server:app --reload
