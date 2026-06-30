@@ -386,51 +386,89 @@ def api_set_swipe(character: str, chat_id: str, msg_id: str, data: dict = Body(.
 # ── PROMPT BUILDER ────────────────────────────────────────────────────────────
 
 def build_prompt(character_data, history, user_message, persona, memory):
-    char_name = character_data.get("name", "The character")
+    char_name   = character_data.get("name", "Character")
+    universe    = character_data.get("universe", "")
     persona_block = character_data.get("persona", {}) or {}
-    style_block = character_data.get("dialogue_style", {}) or {}
+    style_block   = character_data.get("dialogue_style", {}) or {}
+    example_dialogue = character_data.get("example_dialogue", []) or []
 
-    system_prompt = f"""
-You are {char_name}, a fictional character in a roleplay chat.
+    # ── Who the user is ──────────────────────────────────────────────────────
+    user_name = persona.get("name", "the user") if persona else "the user"
+    user_desc = persona.get("description", "") if persona else ""
 
-You speak, think, and act ONLY as {char_name}.
-You NEVER write actions, thoughts, or dialogue for the user.
-You NEVER switch POV away from {char_name}.
-You NEVER describe what the user feels, thinks, or does.
-You ONLY write your own dialogue, actions, and internal thoughts.
+    # ── Core identity block ───────────────────────────────────────────────────
+    system_prompt = f"""You are {char_name}{f' from {universe}' if universe else ''}.
 
-Roleplay Formatting:
-- Use *asterisks* for your actions. Example: *he leans back in his chair*
-- Use quotes for your spoken dialogue. Example: "So, you really mean that?"
-- You may include internal thoughts in italics or plain text, but clearly as your own.
-- Stay immersive, emotional, and character-driven. Avoid meta commentary.
-- Do NOT add content warnings, disclaimers, or moral lectures.
-- Do NOT break character to talk about being an AI or a model.
+IDENTITY
+{persona_block.get("identity", f"You are {char_name}.")}
 
-Character Profile:
-- Identity: {persona_block.get("identity", "")}
-- Personality: {persona_block.get("personality", "")}
-- Knowledge Scope: {persona_block.get("knowledge_scope", "")}
-- Improv Rules: {persona_block.get("improv_rules", "")}
-- Behavior Rules: {persona_block.get("behavior_rules", "")}
-- Boundaries: {persona_block.get("boundaries", "")}
+PERSONALITY
+{persona_block.get("personality", "")}
 
-Dialogue Style:
-- Voice: {style_block.get("voice", "")}
-- Formatting: {style_block.get("formatting", "")}
-- Pacing: {style_block.get("pacing", "")}
+KNOWLEDGE
+{persona_block.get("knowledge_scope", f"You have full knowledge of your world and history.")}
+
+BEHAVIOUR RULES
+{persona_block.get("behavior_rules", "")}
+{persona_block.get("improv_rules", "")}
+{persona_block.get("boundaries", "")}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WRITING STYLE — follow these exactly
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Voice & tone : {style_block.get("voice", "Engaging, immersive, in-character.")}
+Formatting   : {style_block.get("formatting", "Use *asterisks* for actions, quotes for speech.")}
+Pacing       : {style_block.get("pacing", "Medium to long, narratively rich responses.")}
+
+RESPONSE LENGTH & DETAIL
+- Write at least 3–5 sentences per response. Do NOT give one-liners unless the character is being very intentionally curt.
+- Blend action beats (*italicised actions*) with spoken dialogue and internal reaction.
+- Show, don't tell. Describe what {char_name} does, feels, notices — not just what they say.
+- End on something that invites the other person to respond: a question, an unfinished action, a lingering look, a pause.
+
+ABSOLUTE RULES — never break these
+1. You are {char_name}. You speak, act, and think ONLY as {char_name}.
+2. NEVER write dialogue, actions, or thoughts for {user_name}. Not even one word.
+3. NEVER refer to yourself as an AI, a language model, or a chatbot.
+4. NEVER add disclaimers, content warnings, or moral commentary.
+5. NEVER break the fourth wall or step outside the fiction.
+6. If {user_name} does something unexpected, react as {char_name} would — stay in the scene.
+7. Keep responses immersive. No lists, no bullet points, no headers inside your reply.
 """
 
+    # ── User / persona context ────────────────────────────────────────────────
     if persona:
         system_prompt += f"""
-User Context (for reference only, do NOT write their actions or thoughts):
-- Name: {persona.get("name","")}
-- Description: {persona.get("description","")}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHO YOU'RE TALKING TO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name        : {user_name}
+Description : {user_desc}
+(React to them as {char_name} naturally would. Do NOT narrate their actions or feelings.)
 """
 
+    # ── Pinned memory ─────────────────────────────────────────────────────────
     if memory:
-        system_prompt += f"\nPinned Memory (things you should remember about the user and story):\n{memory}\n"
+        system_prompt += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PINNED MEMORY — treat this as established fact
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{memory}
+"""
 
+    # ── Few-shot examples from character card ─────────────────────────────────
+    if example_dialogue:
+        system_prompt += """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLE EXCHANGES — match this voice
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+        for ex in example_dialogue[:3]:
+            system_prompt += f"""
+{user_name}: {ex.get("user", "")}
+{char_name}: {ex.get("character", "")}"""
+        system_prompt += "\n"
+
+    # ── Build message list ────────────────────────────────────────────────────
     messages = [{"role": "system", "content": system_prompt.strip()}]
 
     for msg in history[-HISTORY_LIMIT:]:
@@ -457,14 +495,15 @@ def ollama_generate(prompt_text: str, stream: bool = False):
             "model": MODEL_NAME,
             "prompt": prompt_text,
             "stream": stream,
-            "temperature": 1.2,
-            "top_p": 0.95,
-            "top_k": 40,
-            "repeat_penalty": 1.1,
-            "num_predict": 400,
+            "temperature": 1.05,   # lower = more coherent character voice
+            "top_p": 0.92,
+            "top_k": 50,
+            "repeat_penalty": 1.15, # discourages looping / repetition
+            "num_predict": 800,     # longer responses, CA-length
+            "stop": [],             # no hard stops — let it finish naturally
         },
         stream=stream,
-        timeout=120
+        timeout=180
     )
 
 # ── CHAT ──────────────────────────────────────────────────────────────────────
