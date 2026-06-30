@@ -4,139 +4,379 @@
 
 const API = "http://127.0.0.1:8000";
 
-const chatWindow = document.getElementById("chatWindow");
-const userInput = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
-
-const menuButton = document.getElementById("menuButton");
-const sideDrawer = document.getElementById("sideDrawer");
-
-const openHistoryBtn = document.getElementById("openHistoryBtn");
-const historyDrawer = document.getElementById("historyDrawer");
-const closeHistoryBtn = document.getElementById("closeHistoryBtn");
-const historyList = document.getElementById("historyList");
+const chatWindow       = document.getElementById("chatWindow");
+const userInput        = document.getElementById("userInput");
+const sendBtn          = document.getElementById("sendBtn");
+const menuButton       = document.getElementById("menuButton");
+const sideDrawer       = document.getElementById("sideDrawer");
+const openHistoryBtn   = document.getElementById("openHistoryBtn");
+const historyDrawer    = document.getElementById("historyDrawer");
+const closeHistoryBtn  = document.getElementById("closeHistoryBtn");
+const historyList      = document.getElementById("historyList");
 const historyNewChatBtn = document.getElementById("historyNewChatBtn");
+const personaSelect    = document.getElementById("personaSelect");
+const memoryBox        = document.getElementById("memoryBox");
+const saveMemoryBtn    = document.getElementById("saveMemoryBtn");
+const charNameEl       = document.getElementById("charName");
+const charAvatarEl     = document.getElementById("charAvatar");
+const drawerAvatarEl   = document.getElementById("drawerAvatar");
+const drawerNameEl     = document.getElementById("drawerName");
+const drawerDescEl     = document.getElementById("drawerDesc");
+const typingIndicator  = document.getElementById("typingIndicator");
 
-const personaSelect = document.getElementById("personaSelect");
-const memoryBox = document.getElementById("memoryBox");
-const saveMemoryBtn = document.getElementById("saveMemoryBtn");
-
-const charNameEl = document.getElementById("charName");
-const charAvatarEl = document.getElementById("charAvatar");
-const drawerAvatarEl = document.getElementById("drawerAvatar");
-const drawerNameEl = document.getElementById("drawerName");
-const drawerDescEl = document.getElementById("drawerDesc");
-
-const typingIndicator = document.getElementById("typingIndicator");
-
-const params = new URLSearchParams(window.location.search);
+const params    = new URLSearchParams(window.location.search);
 const character = params.get("character");
 
-let sessions = [];
+let sessions      = [];
 let currentChatId = null;
-
-let personas = [];
+let personas      = [];
 let currentPersona = null;
+let isGenerating  = false;
 
-let characterMeta = {
-  name: "Character",
-  avatarUrl: "/ui/fallback.png"
-};
+let characterMeta = { name: "Character", avatarUrl: "/ui/fallback.png" };
 
 /* ===========================
    UI HELPERS
 =========================== */
 
-function scrollToBottom() {
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-}
-
-function clearChatWindow() {
-  chatWindow.innerHTML = "";
-}
+function scrollToBottom() { chatWindow.scrollTop = chatWindow.scrollHeight; }
+function clearChatWindow() { chatWindow.innerHTML = ""; }
 
 /**
- * Add a chat bubble with avatar + name above it.
- * type: "user" | "bot"
- * returns the inner .bubble-text element (for streaming/editing)
+ * Build a message row (avatar + name header + bubble).
+ * Returns { messageDiv, bubbleEl, contentEl } so callers can do
+ * further customisation (add swipe controls, edit button, etc.)
  */
-function addBubble(text, type, messageId = null, typing = false) {
+function buildMessageRow(text, type, messageId = null) {
   const messageDiv = document.createElement("div");
   messageDiv.className = `message ${type}`;
+  if (messageId) messageDiv.dataset.msgId = messageId;
 
-  // Header (avatar + name)
-  const header = document.createElement("div");
+  // ── header ─────────────────────────────────────────────
+  const header   = document.createElement("div");
   header.className = "msg-header";
 
-  const avatar = document.createElement("img");
+  const avatar   = document.createElement("img");
   avatar.className = "avatar";
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "name";
 
   if (type === "user") {
-    const persona = currentPersona;
-    avatar.src = persona && persona.image_url
-      ? `${API}/${persona.image_url.replace(/^\/?/, "")}`
-      : "/ui/fallback.png";
-    nameSpan.textContent = persona ? persona.name : "You";
+    const p = currentPersona;
+    avatar.src       = p?.image_url ? `${API}/${p.image_url.replace(/^\/?/, "")}` : "/ui/fallback.png";
+    nameSpan.textContent = p ? p.name : "You";
   } else {
-    avatar.src = characterMeta.avatarUrl;
+    avatar.src       = characterMeta.avatarUrl;
     nameSpan.textContent = characterMeta.name;
   }
 
   header.appendChild(avatar);
   header.appendChild(nameSpan);
 
-  // Bubble
-  const bubble = document.createElement("div");
-  bubble.className = `bubble ${type === "user" ? "user-bubble" : "bot-bubble"}`;
-  if (typing) bubble.classList.add("typing");
-  if (messageId) bubble.dataset.id = messageId;
+  // ── bubble ─────────────────────────────────────────────
+  const bubbleEl  = document.createElement("div");
+  bubbleEl.className = `bubble ${type === "user" ? "user-bubble" : "bot-bubble"}`;
+  if (messageId) bubbleEl.dataset.id = messageId;
 
-  const content = document.createElement("div");
-  content.className = "bubble-text";
+  const contentEl = document.createElement("div");
+  contentEl.className = "bubble-text";
+  contentEl.textContent = text;
 
-  if (typing) {
-    content.innerHTML = `
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-    `;
-  } else {
-    content.textContent = text;
-  }
-
-  bubble.appendChild(content);
-
-  if (type === "bot" && messageId) {
-    const editBtn = document.createElement("button");
-    editBtn.className = "edit-btn";
-    editBtn.textContent = "Edit";
-    bubble.appendChild(editBtn);
-  }
-
+  bubbleEl.appendChild(contentEl);
   messageDiv.appendChild(header);
-  messageDiv.appendChild(bubble);
+  messageDiv.appendChild(bubbleEl);
+
+  return { messageDiv, bubbleEl, contentEl };
+}
+
+/** Add a plain bubble with no controls (used for streaming placeholder). */
+function addRawBubble(text, type) {
+  const { messageDiv, contentEl } = buildMessageRow(text, type);
+  chatWindow.appendChild(messageDiv);
+  scrollToBottom();
+  return contentEl;
+}
+
+/**
+ * Render a full message row with controls (edit, delete, swipes for bot).
+ * swipes: array of all alternatives. swipeIndex: which one is currently shown.
+ */
+function renderMessage(msg) {
+  const type = msg.role === "user" ? "user" : "bot";
+  const { messageDiv, bubbleEl, contentEl } = buildMessageRow(msg.text, type, msg.id);
+
+  if (type === "bot") {
+    attachBotControls(messageDiv, bubbleEl, contentEl, msg);
+  } else {
+    attachUserControls(messageDiv, bubbleEl, contentEl, msg);
+  }
 
   chatWindow.appendChild(messageDiv);
   scrollToBottom();
+  return { messageDiv, bubbleEl, contentEl };
+}
 
-  return content;
+/* ──────────────────── BOT controls ────────────────────── */
+
+function attachBotControls(messageDiv, bubbleEl, contentEl, msg) {
+  const swipes      = msg.swipes || [];
+  let   swipeIndex  = msg.swipe_index ?? 0;
+
+  // ── action row (edit / delete / regenerate) ─────────
+  const actionRow = document.createElement("div");
+  actionRow.className = "msg-action-row";
+
+  const editBtn   = makeActionBtn("✏️ Edit",      "edit-btn");
+  const deleteBtn = makeActionBtn("🗑️ Delete",    "delete-btn");
+  const regenBtn  = makeActionBtn("🔄 Regenerate","regen-btn");
+
+  actionRow.appendChild(editBtn);
+  actionRow.appendChild(deleteBtn);
+  actionRow.appendChild(regenBtn);
+
+  // ── swipe controls (only if more than 1 swipe stored) ─
+  let swipeRow = null;
+  if (swipes.length > 1) {
+    swipeRow = buildSwipeRow(swipes, swipeIndex, contentEl, msg.id);
+  }
+
+  if (swipeRow) bubbleEl.after(swipeRow);
+  bubbleEl.after(actionRow);
+
+  // ── EDIT ──────────────────────────────────────────────
+  editBtn.onclick = () => {
+    if (editBtn.dataset.editing === "1") return;
+    editBtn.dataset.editing = "1";
+
+    const original = contentEl.textContent;
+    contentEl.innerHTML = "";
+
+    const ta = document.createElement("textarea");
+    ta.className = "edit-area";
+    ta.value = original;
+    contentEl.appendChild(ta);
+
+    const controls = document.createElement("div");
+    controls.className = "edit-controls";
+
+    const saveEl   = document.createElement("button");
+    saveEl.textContent = "Save";
+    saveEl.className = "save-edit";
+
+    const cancelEl = document.createElement("button");
+    cancelEl.textContent = "Cancel";
+    cancelEl.className = "cancel-edit";
+
+    controls.appendChild(saveEl);
+    controls.appendChild(cancelEl);
+    contentEl.appendChild(controls);
+    ta.focus();
+
+    saveEl.onclick = async () => {
+      const newText = ta.value.trim();
+      if (newText) {
+        await fetch(`${API}/chat/${character}/${currentChatId}/message/${msg.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ new_text: newText })
+        });
+        msg.text = newText;
+      }
+      contentEl.textContent = msg.text;
+      delete editBtn.dataset.editing;
+    };
+
+    cancelEl.onclick = () => {
+      contentEl.textContent = original;
+      delete editBtn.dataset.editing;
+    };
+  };
+
+  // ── DELETE ────────────────────────────────────────────
+  deleteBtn.onclick = async () => {
+    if (!confirm("Delete this message?")) return;
+    await fetch(`${API}/chat/${character}/${currentChatId}/message/${msg.id}`, {
+      method: "DELETE"
+    });
+    messageDiv.remove();
+    if (swipeRow) swipeRow.remove();
+    actionRow.remove();
+  };
+
+  // ── REGENERATE ────────────────────────────────────────
+  regenBtn.onclick = async () => {
+    if (isGenerating) return;
+    isGenerating = true;
+    regenBtn.disabled = true;
+    regenBtn.textContent = "⏳ Regenerating…";
+
+    try {
+      const res = await fetch(`${API}/chat/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ character, chat_id: currentChatId })
+      });
+      const data = await res.json();
+      const newSwipes    = data.replies || [];
+      const userMessage  = data.user_message || "";
+
+      if (newSwipes.length === 0) return;
+
+      // Update visual
+      msg.swipes      = newSwipes;
+      msg.swipe_index = 0;
+      msg.text        = newSwipes[0];
+      contentEl.textContent = newSwipes[0];
+
+      // Rebuild swipe row
+      if (swipeRow) swipeRow.remove();
+      swipeRow = buildSwipeRow(newSwipes, 0, contentEl, msg.id);
+      actionRow.before(swipeRow);
+
+      // Commit to server
+      await fetch(`${API}/chat/commit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          character,
+          chat_id: currentChatId,
+          message: userMessage,
+          reply: newSwipes[0],
+          swipes: newSwipes
+        })
+      });
+    } finally {
+      isGenerating = false;
+      regenBtn.disabled = false;
+      regenBtn.textContent = "🔄 Regenerate";
+    }
+  };
+}
+
+/** Build a swipe navigation row for a bot bubble. */
+function buildSwipeRow(swipes, initialIndex, contentEl, msgId) {
+  let index = initialIndex;
+
+  const row = document.createElement("div");
+  row.className = "swipe-row";
+
+  const prevBtn   = document.createElement("button");
+  prevBtn.textContent = "◀";
+  prevBtn.className = "swipe-nav";
+
+  const counter   = document.createElement("span");
+  counter.className = "swipe-counter";
+
+  const nextBtn   = document.createElement("button");
+  nextBtn.textContent = "▶";
+  nextBtn.className = "swipe-nav";
+
+  row.appendChild(prevBtn);
+  row.appendChild(counter);
+  row.appendChild(nextBtn);
+
+  function update() {
+    contentEl.textContent = swipes[index];
+    counter.textContent   = `${index + 1} / ${swipes.length}`;
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = index === swipes.length - 1;
+  }
+
+  update();
+
+  prevBtn.onclick = async () => {
+    if (index > 0) { index--; update(); await persistSwipe(msgId, index); }
+  };
+  nextBtn.onclick = async () => {
+    if (index < swipes.length - 1) { index++; update(); await persistSwipe(msgId, index); }
+  };
+
+  return row;
+}
+
+async function persistSwipe(msgId, newIndex) {
+  await fetch(`${API}/chat/${character}/${currentChatId}/message/${msgId}/swipe`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ swipe_index: newIndex })
+  });
+}
+
+/* ──────────────────── USER controls ───────────────────── */
+
+function attachUserControls(messageDiv, bubbleEl, contentEl, msg) {
+  const actionRow = document.createElement("div");
+  actionRow.className = "msg-action-row user-action-row";
+
+  const editBtn   = makeActionBtn("✏️ Edit",   "edit-btn");
+  const deleteBtn = makeActionBtn("🗑️ Delete", "delete-btn");
+
+  actionRow.appendChild(editBtn);
+  actionRow.appendChild(deleteBtn);
+  bubbleEl.after(actionRow);
+
+  editBtn.onclick = () => {
+    if (editBtn.dataset.editing === "1") return;
+    editBtn.dataset.editing = "1";
+    const original = contentEl.textContent;
+    contentEl.innerHTML = "";
+
+    const ta = document.createElement("textarea");
+    ta.className = "edit-area";
+    ta.value = original;
+    contentEl.appendChild(ta);
+
+    const controls = document.createElement("div");
+    controls.className = "edit-controls";
+    const saveEl   = document.createElement("button");
+    saveEl.textContent = "Save";
+    saveEl.className = "save-edit";
+    const cancelEl = document.createElement("button");
+    cancelEl.textContent = "Cancel";
+    cancelEl.className = "cancel-edit";
+    controls.appendChild(saveEl);
+    controls.appendChild(cancelEl);
+    contentEl.appendChild(controls);
+    ta.focus();
+
+    saveEl.onclick = async () => {
+      const newText = ta.value.trim();
+      if (newText) {
+        await fetch(`${API}/chat/${character}/${currentChatId}/message/${msg.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ new_text: newText })
+        });
+        msg.text = newText;
+      }
+      contentEl.textContent = msg.text;
+      delete editBtn.dataset.editing;
+    };
+    cancelEl.onclick = () => { contentEl.textContent = original; delete editBtn.dataset.editing; };
+  };
+
+  deleteBtn.onclick = async () => {
+    if (!confirm("Delete this message?")) return;
+    await fetch(`${API}/chat/${character}/${currentChatId}/message/${msg.id}`, { method: "DELETE" });
+    messageDiv.remove();
+    actionRow.remove();
+  };
+}
+
+function makeActionBtn(label, cls) {
+  const btn = document.createElement("button");
+  btn.textContent = label;
+  btn.className = `msg-action-btn ${cls}`;
+  return btn;
 }
 
 /* Typing Indicator */
 function showTyping() {
   typingIndicator.classList.remove("hidden");
-  typingIndicator.classList.add("fade-in");
 }
-
 function hideTyping() {
-  typingIndicator.classList.add("fade-out");
-  setTimeout(() => {
-    typingIndicator.classList.add("hidden");
-    typingIndicator.classList.remove("fade-in", "fade-out");
-  }, 250);
+  typingIndicator.classList.add("hidden");
 }
 
 /* ===========================
@@ -145,10 +385,10 @@ function hideTyping() {
 
 async function loadCharacter() {
   try {
-    const res = await fetch(`${API}/character/${character}`);
+    const res  = await fetch(`${API}/character/${character}`);
     const data = await res.json();
 
-    charNameEl.textContent = data.name;
+    charNameEl.textContent  = data.name;
     drawerNameEl.textContent = data.name;
     drawerDescEl.textContent = data.description;
 
@@ -156,13 +396,9 @@ async function loadCharacter() {
       ? `${API}/${data.image_url.replace(/^\/?/, "")}`
       : "/ui/fallback.png";
 
-    charAvatarEl.src = resolved;
+    charAvatarEl.src  = resolved;
     drawerAvatarEl.src = resolved;
-
-    characterMeta = {
-      name: data.name || "Character",
-      avatarUrl: resolved
-    };
+    characterMeta = { name: data.name || "Character", avatarUrl: resolved };
   } catch (err) {
     console.error("loadCharacter failed:", err);
   }
@@ -170,10 +406,9 @@ async function loadCharacter() {
 
 async function loadPersonas() {
   const res = await fetch(`${API}/personas`);
-  personas = await res.json();
+  personas  = await res.json();
 
   personaSelect.innerHTML = "<option value=''>No persona</option>";
-
   personas.forEach(p => {
     const opt = document.createElement("option");
     opt.value = p.id;
@@ -195,25 +430,21 @@ function updateCurrentPersona() {
 
 async function loadSessions() {
   const res = await fetch(`${API}/chat-sessions/${character}`);
-  sessions = await res.json();
-
+  sessions  = await res.json();
   renderHistoryList();
 
   if (!currentChatId) {
-    if (sessions.length > 0) {
-      selectSession(sessions[0].id);
-    } else {
-      await createNewSession();
-    }
+    if (sessions.length > 0) selectSession(sessions[0].id);
+    else await createNewSession();
   }
 }
 
 function renderHistoryList() {
   historyList.innerHTML = "";
-
   sessions.forEach(session => {
     const row = document.createElement("div");
     row.className = "chat-row";
+    if (session.id === currentChatId) row.classList.add("active");
 
     const titleSpan = document.createElement("span");
     titleSpan.textContent = session.title;
@@ -243,17 +474,13 @@ function renderHistoryList() {
 
 function openSessionMenu(session, row, titleSpan) {
   const existing = row.querySelector(".chat-row-menu-panel");
-  if (existing) {
-    existing.remove();
-    return;
-  }
+  if (existing) { existing.remove(); return; }
 
-  const panel = document.createElement("div");
+  const panel     = document.createElement("div");
   panel.className = "chat-row-menu-panel";
 
   const renameBtn = document.createElement("button");
   renameBtn.textContent = "Rename";
-
   const deleteBtn = document.createElement("button");
   deleteBtn.textContent = "Delete";
 
@@ -275,9 +502,9 @@ function openSessionMenu(session, row, titleSpan) {
 }
 
 function startRenameSession(session, titleSpan) {
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = session.title;
+  const input    = document.createElement("input");
+  input.type     = "text";
+  input.value    = session.title;
   input.className = "chat-row-rename";
 
   const parent = titleSpan.parentNode;
@@ -292,11 +519,7 @@ function startRenameSession(session, titleSpan) {
         await fetch(`${API}/chat-session/rename`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            character,
-            chat_id: session.id,
-            title: newTitle
-          })
+          body: JSON.stringify({ character, chat_id: session.id, title: newTitle })
         });
         session.title = newTitle;
       }
@@ -310,7 +533,6 @@ function startRenameSession(session, titleSpan) {
     if (e.key === "Enter") finish(true);
     else if (e.key === "Escape") finish(false);
   });
-
   input.addEventListener("blur", () => finish(true));
 }
 
@@ -321,7 +543,6 @@ async function createNewSession() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ character, persona_id })
   });
-
   const session = await res.json();
   sessions.unshift(session);
   renderHistoryList();
@@ -336,52 +557,28 @@ async function deleteSession(chatId) {
   });
 
   sessions = sessions.filter(s => s.id !== chatId);
-
   if (currentChatId === chatId) {
     currentChatId = null;
     clearChatWindow();
     memoryBox.value = "";
   }
-
   renderHistoryList();
-
-  if (!currentChatId && sessions.length > 0) {
-    selectSession(sessions[0].id);
-  }
+  if (!currentChatId && sessions.length > 0) selectSession(sessions[0].id);
 }
 
 async function selectSession(chatId) {
   currentChatId = chatId;
   clearChatWindow();
 
-  const res = await fetch(`${API}/chat-history/${character}/${chatId}`);
+  const res  = await fetch(`${API}/chat-history/${character}/${chatId}`);
   const data = await res.json();
 
   personaSelect.value = data.persona_id || "";
   updateCurrentPersona();
-
   memoryBox.value = data.memory || "";
 
-  data.history.forEach(msg => {
-    addBubble(
-      msg.text,
-      msg.role === "user" ? "user" : "bot",
-      msg.id
-    );
-  });
-}
-async function savePersonaSelection() {
-  if (!currentChatId) return;
-
-  await fetch(`${API}/chat-session/rename`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      character,
-      chat_id: currentChatId,
-      persona_id: personaSelect.value
-    })
-  });
+  (data.history || []).forEach(msg => renderMessage(msg));
+  renderHistoryList(); // refresh active highlight
 }
 
 /* ===========================
@@ -390,7 +587,6 @@ async function savePersonaSelection() {
 
 async function saveMemory() {
   if (!currentChatId) return;
-
   await fetch(`${API}/chat-memory/${character}/${currentChatId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -399,102 +595,26 @@ async function saveMemory() {
 }
 
 /* ===========================
-   SWIPES (extra generations)
-=========================== */
-
-function renderSwipeBlock(replies, userText, botContent) {
-  if (!replies || replies.length === 0) return;
-
-  let index = 0;
-
-  const container = document.createElement("div");
-  container.className = "bot-swipe-block";
-
-  const controls = document.createElement("div");
-  controls.className = "swipe-controls";
-
-  const prevBtn = document.createElement("button");
-  prevBtn.textContent = "◀";
-
-  const indexSpan = document.createElement("span");
-  indexSpan.className = "swipe-index";
-  indexSpan.textContent = `${index + 1} / ${replies.length}`;
-
-  const nextBtn = document.createElement("button");
-  nextBtn.textContent = "▶";
-
-  controls.appendChild(prevBtn);
-  controls.appendChild(indexSpan);
-  controls.appendChild(nextBtn);
-
-  const selectBtn = document.createElement("button");
-  selectBtn.className = "select-btn";
-  selectBtn.textContent = "Select";
-
-  container.appendChild(controls);
-  container.appendChild(selectBtn);
-
-  const botBubble = botContent.parentNode;
-  botBubble.after(container);
-
-  function updateBubble() {
-    botContent.textContent = replies[index];
-    indexSpan.textContent = `${index + 1} / ${replies.length}`;
-    scrollToBottom();
-  }
-
-  updateBubble();
-
-  prevBtn.onclick = () => {
-    if (index > 0) {
-      index--;
-      updateBubble();
-    }
-  };
-
-  nextBtn.onclick = () => {
-    if (index < replies.length - 1) {
-      index++;
-      updateBubble();
-    }
-  };
-
-  selectBtn.onclick = async () => {
-    const chosen = replies[index];
-
-    await fetch(`${API}/chat/commit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        character,
-        chat_id: currentChatId,
-        message: userText,
-        reply: chosen
-      })
-    });
-
-    container.remove();
-  };
-}
-
-/* ===========================
-   STREAMING CHAT
+   STREAMING SEND
 =========================== */
 
 async function sendMessage() {
+  if (isGenerating) return;
   const text = userInput.value.trim();
-
-  if (!text) {
-    return continueMessage();
-  }
+  if (!text) return continueMessage();
   if (!currentChatId) return;
 
-  addBubble(text, "user");
-  const userText = text;
+  isGenerating = true;
+  sendBtn.disabled = true;
+
+  // Optimistically render user bubble
+  const userMsgId = "temp-" + Date.now();
+  const userMsg   = { id: userMsgId, role: "user", text, swipes: [], swipe_index: 0 };
+  renderMessage(userMsg);
   userInput.value = "";
 
-  const botContent = addBubble("", "bot");
-
+  // Placeholder bot bubble for streaming
+  const botContentEl = addRawBubble("", "bot");
   showTyping();
 
   let fullText = "";
@@ -503,102 +623,103 @@ async function sendMessage() {
     const res = await fetch(`${API}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        character,
-        chat_id: currentChatId,
-        message: userText
-      })
+      body: JSON.stringify({ character, chat_id: currentChatId, message: text })
     });
 
     if (!res.ok || !res.body) {
       hideTyping();
-      botContent.textContent = "The server didn't respond. Try again?";
+      botContentEl.textContent = "The server didn't respond. Try again?";
+      isGenerating = false;
+      sendBtn.disabled = false;
       return;
     }
 
-    const reader = res.body.getReader();
+    const reader  = res.body.getReader();
     const decoder = new TextDecoder();
-
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-
       const chunk = decoder.decode(value);
       fullText += chunk;
-
-      botContent.textContent += chunk;
+      botContentEl.textContent = fullText;
       scrollToBottom();
     }
 
     hideTyping();
 
+    // Generate swipes in parallel
     let swipeReplies = [];
     try {
       const swipeRes = await fetch(`${API}/chat-swipes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          character,
-          chat_id: currentChatId,
-          message: userText
-        })
+        body: JSON.stringify({ character, chat_id: currentChatId, message: text })
       });
+      if (swipeRes.ok) swipeReplies = (await swipeRes.json()).replies || [];
+    } catch (e) { console.warn("Swipe fetch failed", e); }
 
-      if (swipeRes.ok) {
-        const data = await swipeRes.json();
-        swipeReplies = data.replies || [];
-      }
-    } catch (e) {
-      console.warn("Swipe fetch failed", e);
-    }
+    const allSwipes = [fullText, ...swipeReplies];
 
-    const allReplies = [fullText, ...swipeReplies];
+    // Commit everything to server
+    const commitRes = await fetch(`${API}/chat/commit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        character,
+        chat_id: currentChatId,
+        message: text,
+        reply: fullText,
+        swipes: allSwipes
+      })
+    });
+    const committed = await commitRes.json();
 
-    renderSwipeBlock(allReplies, userText, botContent);
+    // Replace temp bubbles with properly persisted ones (reload session)
+    clearChatWindow();
+    const histRes  = await fetch(`${API}/chat-history/${character}/${currentChatId}`);
+    const histData = await histRes.json();
+    (histData.history || []).forEach(m => renderMessage(m));
+
   } catch (e) {
     console.error(e);
     hideTyping();
-    botContent.textContent = "I'm having trouble responding right now. Try again?";
+    botContentEl.textContent = "I'm having trouble responding right now. Try again?";
+  } finally {
+    isGenerating = false;
+    sendBtn.disabled = false;
   }
 }
 
 async function continueMessage() {
-  if (!currentChatId) return;
+  if (isGenerating || !currentChatId) return;
+  isGenerating = true;
+  sendBtn.disabled = true;
 
-  const botContent = addBubble("", "bot", null, true);
-
+  const botContentEl = addRawBubble("", "bot");
   showTyping();
-
   let fullText = "";
 
   try {
     const res = await fetch(`${API}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        character,
-        chat_id: currentChatId,
-        message: ""
-      })
+      body: JSON.stringify({ character, chat_id: currentChatId, message: "" })
     });
 
     if (!res.ok || !res.body) {
       hideTyping();
-      botContent.textContent = "The server didn't respond. Try again?";
+      botContentEl.textContent = "The server didn't respond. Try again?";
       return;
     }
 
-    const reader = res.body.getReader();
+    const reader  = res.body.getReader();
     const decoder = new TextDecoder();
-
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-
       const chunk = decoder.decode(value);
       fullText += chunk;
-
-      botContent.textContent = fullText;
+      botContentEl.textContent = fullText;
       scrollToBottom();
     }
 
@@ -607,17 +728,22 @@ async function continueMessage() {
     await fetch(`${API}/chat/commit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        character,
-        chat_id: currentChatId,
-        message: "",
-        reply: fullText
-      })
+      body: JSON.stringify({ character, chat_id: currentChatId, message: "", reply: fullText, swipes: [fullText] })
     });
+
+    // Reload to get proper IDs and controls
+    clearChatWindow();
+    const histRes  = await fetch(`${API}/chat-history/${character}/${currentChatId}`);
+    const histData = await histRes.json();
+    (histData.history || []).forEach(m => renderMessage(m));
+
   } catch (e) {
     console.error(e);
     hideTyping();
-    botContent.textContent = "I'm having trouble responding right now. Try again?";
+    botContentEl.textContent = "I'm having trouble responding right now. Try again?";
+  } finally {
+    isGenerating = false;
+    sendBtn.disabled = false;
   }
 }
 
@@ -625,88 +751,37 @@ async function continueMessage() {
    DRAWERS & EVENTS
 =========================== */
 
-console.log("Character param:", character);
-
-menuButton.onclick = () => sideDrawer.classList.toggle("open");
+menuButton.onclick  = () => sideDrawer.classList.toggle("open");
 openHistoryBtn.onclick = () => historyDrawer.classList.add("open");
 closeHistoryBtn.onclick = () => historyDrawer.classList.remove("open");
 
 document.addEventListener("click", (e) => {
-  const insideMain = sideDrawer.contains(e.target);
+  const insideMain    = sideDrawer.contains(e.target);
   const insideHistory = historyDrawer.contains(e.target);
-  const clickedMenu = menuButton.contains(e.target);
-
+  const clickedMenu   = menuButton.contains(e.target);
   if (!insideMain && !clickedMenu && !insideHistory) {
     sideDrawer.classList.remove("open");
     historyDrawer.classList.remove("open");
   }
 });
 
-saveMemoryBtn.onclick = saveMemory;
+saveMemoryBtn.onclick    = saveMemory;
 historyNewChatBtn.onclick = createNewSession;
-sendBtn.onclick = sendMessage;
+sendBtn.onclick          = sendMessage;
 
-personaSelect.addEventListener("change", () => {
-  updateCurrentPersona();
-});
+personaSelect.addEventListener("change", updateCurrentPersona);
 
 userInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     if (e.shiftKey) {
       e.preventDefault();
-      const start = userInput.selectionStart;
-      const end = userInput.selectionEnd;
-      userInput.value =
-        userInput.value.substring(0, start) +
-        "\n" +
-        userInput.value.substring(end);
-      userInput.selectionStart = userInput.selectionEnd = start + 1;
+      const s = userInput.selectionStart, end = userInput.selectionEnd;
+      userInput.value = userInput.value.substring(0, s) + "\n" + userInput.value.substring(end);
+      userInput.selectionStart = userInput.selectionEnd = s + 1;
       return;
     }
-
     e.preventDefault();
     sendMessage();
-  }
-});
-
-document.addEventListener("click", async (e) => {
-  if (e.target.classList.contains("edit-btn")) {
-    const bubble = e.target.closest(".bubble");
-    const content = bubble.querySelector(".bubble-text");
-    const original = content.textContent;
-
-    bubble.dataset.original = original;
-
-    content.innerHTML = `
-      <textarea class="edit-area">${original}</textarea>
-      <div class="edit-controls">
-        <button class="save-edit">Save</button>
-        <button class="cancel-edit">Cancel</button>
-      </div>
-    `;
-    return;
-  }
-
-  if (e.target.classList.contains("save-edit")) {
-    const bubble = e.target.closest(".bubble");
-    const id = bubble.dataset.id;
-    const newText = bubble.querySelector(".edit-area").value;
-
-    await fetch(`${API}/chat/${character}/${currentChatId}/message/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ new_text: newText })
-    });
-
-    bubble.querySelector(".bubble-text").textContent = newText;
-    return;
-  }
-
-  if (e.target.classList.contains("cancel-edit")) {
-    const bubble = e.target.closest(".bubble");
-    const original = bubble.dataset.original;
-    bubble.querySelector(".bubble-text").textContent = original;
-    return;
   }
 });
 

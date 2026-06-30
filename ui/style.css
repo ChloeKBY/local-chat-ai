@@ -769,3 +769,94 @@ nav {
   20% { opacity: 1; }
   100% { opacity: 0.2; }
 }
+
+/* ═══════════════════════════════════════════════
+   MESSAGE ACTION ROW  (edit / delete / regen)
+═══════════════════════════════════════════════ */
+
+.msg-action-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  padding-left: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+/* Show controls only when hovering the whole message */
+.message:hover .msg-action-row {
+  opacity: 1;
+}
+
+.user-action-row {
+  justify-content: flex-end;
+  padding-left: 0;
+  padding-right: 4px;
+}
+
+.msg-action-btn {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--blue4);
+  background: var(--blue2);
+  cursor: pointer;
+  color: #4b5563;
+  transition: background 0.15s;
+}
+
+.msg-action-btn:hover   { background: var(--blue4); color: #111; }
+.msg-action-btn:disabled { opacity: 0.5; cursor: default; }
+
+.delete-btn { border-color: #fca5a5; }
+.delete-btn:hover { background: #fee2e2; color: #b91c1c; }
+
+/* ═══════════════════════════════════════════════
+   SWIPE NAVIGATION ROW
+═══════════════════════════════════════════════ */
+
+.swipe-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-left: 4px;
+}
+
+.swipe-nav {
+  background: var(--blue3);
+  border: 1px solid var(--blue5);
+  border-radius: 6px;
+  padding: 2px 9px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s;
+}
+
+.swipe-nav:hover     { background: var(--blue5); }
+.swipe-nav:disabled  { opacity: 0.35; cursor: default; }
+
+.swipe-counter {
+  font-size: 0.78rem;
+  color: #6b7280;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════
+   ACTIVE CHAT SESSION HIGHLIGHT
+═══════════════════════════════════════════════ */
+
+.chat-row.active {
+  background: var(--blue4);
+  border-color: var(--blue6);
+}
+
+/* ═══════════════════════════════════════════════
+   SEND BUTTON DISABLED STATE
+═══════════════════════════════════════════════ */
+
+#sendBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
